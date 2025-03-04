@@ -8,7 +8,7 @@ const router = express.Router();
 dotenv.config();
 
 // ✅ Worker Login
-router.post(`${process.env.BACKEND_URL}/worker-login`, async (req, res) => {
+router.post(`https://inventorybackend-production-6c3c.up.railway.app/worker-login`, async (req, res) => {
   const { username, password } = req.body;
 
   try {
@@ -30,7 +30,7 @@ router.post(`${process.env.BACKEND_URL}/worker-login`, async (req, res) => {
 });
 
 // ✅ Worker Registration
-router.post(`${process.env.BACKEND_URL}/worker-register`, async (req, res) => {
+router.post(`https://inventorybackend-production-6c3c.up.railway.app/worker-register`, async (req, res) => {
   try {
     const { username, workerID } = req.body;
 
@@ -52,7 +52,7 @@ router.post(`${process.env.BACKEND_URL}/worker-register`, async (req, res) => {
 });
 
 // ✅ Admin Login
-router.post(`${process.env.BACKEND_URL}/admin-login`, async (req, res) => {
+router.post(`https://inventorybackend-production-6c3c.up.railway.app/admin-login`, async (req, res) => {
   const { username, password } = req.body;
 
   try {
@@ -75,7 +75,7 @@ router.post(`${process.env.BACKEND_URL}/admin-login`, async (req, res) => {
 
 
 // ✅ Logout for both Admin & Worker
-router.post(`${process.env.BACKEND_URL}}/logout`, (req, res) => {
+router.post(`https://inventorybackend-production-6c3c.up.railway.app/logout`, (req, res) => {
   req.session.destroy((err) => {
     if (err) {
       console.error("Logout error:", err);
@@ -85,7 +85,7 @@ router.post(`${process.env.BACKEND_URL}}/logout`, (req, res) => {
   });
 });
 
-router.get(`${process.env.BACKEND_URL}}/check-auth`, (req, res) => {
+router.get(`https://inventorybackend-production-6c3c.up.railway.app/check-auth`, (req, res) => {
   if (req.session.user) {
     return res.json({ authenticated: true, user: req.session.user });
   }
