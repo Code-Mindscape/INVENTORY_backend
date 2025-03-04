@@ -28,7 +28,8 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 
-app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
 
 app.use(express.json());
 app.use(cookieParser());
@@ -36,14 +37,13 @@ app.use(cookieParser());
 // Session Configuration
 app.use(
   session({
-    secret: SESSION_SECRET,
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: NODE_ENV === "production", // HTTPS only in production
+      secure: true, // Ensure HTTPS (set to `false` for localhost)
       httpOnly: true,
-      sameSite: NODE_ENV === "production" ? "None" : "Lax",
-      maxAge: 24 * 60 * 60 * 1000, // 1-day expiration
+      sameSite: "None", // Required for cross-origin cookies
     },
   })
 );
