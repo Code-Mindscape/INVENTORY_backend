@@ -28,12 +28,13 @@ if (!SESSION_SECRET) {
 }
 
 // Middleware Configuration
-app.use(cors({
-  origin: "http://localhost:5173",
+const corsOptions = {
+  origin: process.env.NODE_ENV === "production" ? process.env.FRONTEND_URL : "http://localhost:5173",  // Use production frontend URL in production
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
-}));
+};
+app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(cookieParser());
@@ -72,7 +73,6 @@ const connectDB = async () => {
       process.exit(1);
     }
   }
-  
 };
 connectDB();
 
@@ -81,7 +81,7 @@ const wrapAsync = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-app.use("/", wrapAsync(Auth));
+app.use("/auth", wrapAsync(Auth));
 app.use("/product", wrapAsync(Product));
 app.use("/order", wrapAsync(Order));
 
