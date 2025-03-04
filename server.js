@@ -9,6 +9,7 @@ import Auth from "./routes/Auth.js";
 import Product from "./routes/Product.js";
 import Order from "./routes/Order.js";
 
+dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -19,16 +20,15 @@ if (!MONGO_URI || !SESSION_SECRET) {
   process.exit(1);
 }
 
+
 const corsOptions = {
-  origin: "https://enventorymanager.vercel.app", // Allow frontend
+  origin: "https://enventorymanager.vercel.app", // Allow frontend domain
   credentials: true, // Allow cookies/session
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Ensure OPTIONS is included
-  allowedHeaders: ["Content-Type", "Authorization"], // Ensure headers are set
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // Handle preflight requests
-
 
 app.use(express.json());
 app.use(cookieParser());
@@ -36,30 +36,17 @@ app.use(cookieParser());
 // Session Configuration
 app.use(
   session({
-    secret: process.env.SESSION_SECRET,
+    secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: true, // Ensure HTTPS (set to `false` for localhost)
+      secure: NODE_ENV === "production", // HTTPS only in production
       httpOnly: true,
-      sameSite: "None", // Required for cross-origin cookies
+      sameSite: NODE_ENV === "production" ? "None" : "Lax",
+      maxAge: 24 * 60 * 60 * 1000, // 1-day expiration
     },
   })
 );
-
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://enventorymanager.vercel.app");
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200); // Handle preflight request
-  }
-  
-  next();
-});
-
 
 // Connect to MongoDB with Retry Logic
 const connectDB = async (retries = 5, delay = 5000) => {
