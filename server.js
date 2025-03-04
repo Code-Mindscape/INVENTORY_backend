@@ -19,15 +19,15 @@ if (!MONGO_URI || !SESSION_SECRET) {
   process.exit(1);
 }
 
-
 const corsOptions = {
-  origin: "https://enventorymanager.vercel.app", // Allow frontend domain
+  origin: "https://enventorymanager.vercel.app", // Allow frontend
   credentials: true, // Allow cookies/session
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Ensure OPTIONS is included
+  allowedHeaders: ["Content-Type", "Authorization"], // Ensure headers are set
 };
 
-app.options("*", cors(corsOptions));
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // Handle preflight requests
 
 
 app.use(express.json());
@@ -46,6 +46,20 @@ app.use(
     },
   })
 );
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://enventorymanager.vercel.app");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200); // Handle preflight request
+  }
+  
+  next();
+});
+
 
 // Connect to MongoDB with Retry Logic
 const connectDB = async (retries = 5, delay = 5000) => {
