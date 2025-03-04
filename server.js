@@ -29,7 +29,7 @@ if (!SESSION_SECRET) {
 
 // Middleware Configuration
 const corsOptions = {
-  origin: process.env.NODE_ENV === "production" ? process.env.FRONTEND_URL : "http://localhost:5173",  // Use production frontend URL in production
+  origin: process.env.NODE_ENV === "production" ? "https://enventorymanager.vercel.app" : "http://localhost:5173",  // Use production frontend URL in production
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
