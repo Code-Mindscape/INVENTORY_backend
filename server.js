@@ -13,75 +13,84 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Validate Essential Environment Variables
-const { MONGO_URI, SESSION_SECRET, NODE_ENV } = process.env;
-if (!MONGO_URI || !SESSION_SECRET) {
-  console.error("❌ Missing required environment variables (MONGO_URI, SESSION_SECRET)");
+// Environment Variables Validation
+const MONGO_URI = process.env.MONGO_URI;
+const SESSION_SECRET = process.env.SESSION_SECRET;
+
+if (!MONGO_URI) {
+  console.error("❌ MONGO_URI is not defined in .env");
   process.exit(1);
 }
 
+if (!SESSION_SECRET) {
+  console.error("❌ SESSION_SECRET is missing in .env");
+  process.exit(1);
+}
 
-const corsOptions = {
-  origin: "https://enventorymanager.vercel.app", // Allow frontend domain
-  credentials: true, // Allow cookies/session
+// Middleware Configuration
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
-};
-
-app.use(cors(corsOptions));
+}));
 
 app.use(express.json());
 app.use(cookieParser());
 
-// Session Configuration
+// Session Configuration (In-Memory Store)
 app.use(
   session({
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: NODE_ENV === "production", // HTTPS only in production
+      secure: process.env.NODE_ENV === "production", // Use HTTPS in production
       httpOnly: true,
-      sameSite: NODE_ENV === "production" ? "None" : "Lax",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
       maxAge: 24 * 60 * 60 * 1000, // 1-day expiration
     },
   })
 );
 
-// Connect to MongoDB with Retry Logic
-const connectDB = async (retries = 5, delay = 5000) => {
-  while (retries) {
-    try {
-      await mongoose.connect(MONGO_URI);
-      console.log("✅ MongoDB Connected");
-      return;
-    } catch (error) {
-      console.error(`❌ MongoDB Connection Failed (${5 - retries + 1}/5): ${error.message}`);
-      retries--;
-      if (!retries) {
-        console.error("❌ Maximum connection attempts reached. Exiting...");
-        process.exit(1);
-      }
-      await new Promise((res) => setTimeout(res, delay));
+// MongoDB Connection with Retry Logic
+let retryCount = 0;
+const MAX_RETRIES = 5;
+
+const connectDB = async () => {
+  try {
+    await mongoose.connect(MONGO_URI);
+    console.log("✅ MongoDB Connected");
+  } catch (error) {
+    console.error(`❌ MongoDB Connection Failed (${retryCount + 1}/${MAX_RETRIES}):`, error.message);
+    retryCount++;
+
+    if (retryCount < MAX_RETRIES) {
+      setTimeout(connectDB, 5000); // Retry after 5 seconds
+    } else {
+      console.error("❌ Maximum connection attempts reached. Exiting...");
+      process.exit(1);
     }
   }
+  
 };
 connectDB();
 
-// Async Error Handling Wrapper
+// Routes with Error Handling Wrapper
 const wrapAsync = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-// API Routes
-app.use("/auth", wrapAsync(Auth));
+app.use("/", wrapAsync(Auth));
 app.use("/product", wrapAsync(Product));
 app.use("/order", wrapAsync(Order));
 
 // Default Route
-app.get("/", (req, res) => res.status(200).json({ message: "Welcome to the API!" }));
+app.get("/", (req, res) => {
+  res.status(200).json({ message: "Welcome to the API!" });
+});
 
-// Global Error Handler
+// Global Error Handling Middleware
 app.use((err, req, res, next) => {
   console.error("🚨 Error:", err.message);
   res.status(err.status || 500).json({
