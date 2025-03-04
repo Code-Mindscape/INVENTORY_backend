@@ -5,6 +5,7 @@ import { Worker } from "../models/Worker.Model.js";
 import session from "express-session";
 
 const router = express.Router();
+dotenv.config();
 
 // ✅ Worker Login
 router.post(`${process.env.BACKEND_URL}/worker-login`, async (req, res) => {
