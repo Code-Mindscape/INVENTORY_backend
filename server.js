@@ -9,7 +9,6 @@ import Auth from "./routes/Auth.js";
 import Product from "./routes/Product.js";
 import Order from "./routes/Order.js";
 
-dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
