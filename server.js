@@ -20,15 +20,15 @@ if (!MONGO_URI || !SESSION_SECRET) {
   process.exit(1);
 }
 
-// Configure CORS
-app.use(
-  cors({
-    origin: NODE_ENV === "production" ? "https://enventorymanager.vercel.app" : "http://localhost:5173",
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+
+const corsOptions = {
+  origin: "https://enventorymanager.vercel.app", // Allow frontend domain
+  credentials: true, // Allow cookies/session
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(cookieParser());
