@@ -7,7 +7,7 @@ import session from "express-session";
 const router = express.Router();
 
 // ✅ Worker Login
-router.post("/worker-login", async (req, res) => {
+router.post(`${process.env.BACKEN_URL}/worker-login`, async (req, res) => {
   const { username, password } = req.body;
 
   try {
@@ -29,7 +29,7 @@ router.post("/worker-login", async (req, res) => {
 });
 
 // ✅ Worker Registration
-router.post("/worker-register", async (req, res) => {
+router.post(`${process.env.BACKEN_URL}/worker-register`, async (req, res) => {
   try {
     const { username, workerID } = req.body;
 
@@ -51,7 +51,7 @@ router.post("/worker-register", async (req, res) => {
 });
 
 // ✅ Admin Login
-router.post("/admin-login", async (req, res) => {
+router.post(`${process.env.BACKEN_URL}/admin-login`, async (req, res) => {
   const { username, password } = req.body;
 
   try {
@@ -74,7 +74,7 @@ router.post("/admin-login", async (req, res) => {
 
 
 // ✅ Logout for both Admin & Worker
-router.post("/logout", (req, res) => {
+router.post(`${process.env.BACKEN_URL}}/logout`, (req, res) => {
   req.session.destroy((err) => {
     if (err) {
       console.error("Logout error:", err);
@@ -84,7 +84,7 @@ router.post("/logout", (req, res) => {
   });
 });
 
-router.get("/check-auth", (req, res) => {
+router.get(`${process.env.BACKEN_URL}}/check-auth`, (req, res) => {
   if (req.session.user) {
     return res.json({ authenticated: true, user: req.session.user });
   }
