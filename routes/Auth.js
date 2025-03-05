@@ -33,12 +33,9 @@ router.post("/worker-register3453", async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // ✅ Hash password before saving
-    const hashedPass = await bcrypt.hash(password, 10);
-
     const newWorker = new Worker({
       username,
-      password: hashedPass,
+      password,
     });
 
     await newWorker.save();
