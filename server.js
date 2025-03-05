@@ -57,29 +57,22 @@ const MAX_RETRIES = 5;
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(MONGO_URI);
     console.log("✅ MongoDB Connected");
-
-    mongoose.connection.on("error", (err) => {
-      console.error("❌ MongoDB Connection Error:", err);
-    });
-
   } catch (error) {
     console.error(`❌ MongoDB Connection Failed (${retryCount + 1}/${MAX_RETRIES}):`, error.message);
     retryCount++;
 
     if (retryCount < MAX_RETRIES) {
-      setTimeout(connectDB, 5000);
+      setTimeout(connectDB, 5000); // Retry after 5 seconds
     } else {
       console.error("❌ Maximum connection attempts reached. Exiting...");
       process.exit(1);
     }
   }
+  
 };
-
+connectDB();
 
 // Routes with Error Handling Wrapper
 const wrapAsync = (fn) => (req, res, next) => {
