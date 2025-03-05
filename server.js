@@ -27,31 +27,29 @@ if (!SESSION_SECRET) {
   process.exit(1);
 }
 
-// Middleware Configuration
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: process.env.FRONTEND_URL || "http://localhost:3000",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
+
 app.use(express.json());
 app.use(cookieParser());
 
 // Session Configuration (In-Memory Store)
-app.use(
-  session({
-    secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production", // Use HTTPS in production
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-      maxAge: 24 * 60 * 60 * 1000, // 1-day expiration
-    },
-  })
-);
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: true,
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+    maxAge: 24 * 60 * 60 * 1000,
+  },
+}));
 
 // MongoDB Connection with Retry Logic
 let retryCount = 0;
@@ -59,22 +57,29 @@ const MAX_RETRIES = 5;
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(MONGO_URI);
+    await mongoose.connect(MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
     console.log("✅ MongoDB Connected");
+
+    mongoose.connection.on("error", (err) => {
+      console.error("❌ MongoDB Connection Error:", err);
+    });
+
   } catch (error) {
     console.error(`❌ MongoDB Connection Failed (${retryCount + 1}/${MAX_RETRIES}):`, error.message);
     retryCount++;
 
     if (retryCount < MAX_RETRIES) {
-      setTimeout(connectDB, 5000); // Retry after 5 seconds
+      setTimeout(connectDB, 5000);
     } else {
       console.error("❌ Maximum connection attempts reached. Exiting...");
       process.exit(1);
     }
   }
-  
 };
-connectDB();
+
 
 // Routes with Error Handling Wrapper
 const wrapAsync = (fn) => (req, res, next) => {
