@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import session from "express-session";
 import cookieParser from "cookie-parser";
+import MongoStore from "connect-mongo"; // ✅ Store sessions in MongoDB
 
 import Auth from "./routes/Auth.js";
 import Product from "./routes/Product.js";
@@ -27,68 +28,65 @@ if (!SESSION_SECRET) {
   process.exit(1);
 }
 
+// ✅ Fix: Allow multiple origins
+const allowedOrigins = ["https://enventorymanager.vercel.app", "http://localhost:3000"];
+
 app.use(cors({
-  origin: "https://enventorymanager.vercel.app" || "http://localhost:3000",
-  credentials: true,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true, // ✅ Allow cookies to be sent
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-
 app.use(express.json());
 app.use(cookieParser());
 
-// Session Configuration (In-Memory Store)
+// ✅ Fix: Trust Proxy for Railway
+app.set("trust proxy", 1);
+
+// ✅ Fix: Store sessions in MongoDB instead of in-memory
 app.use(session({
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({ mongoUrl: MONGO_URI }), // ✅ Persistent session storage
   cookie: {
-    secure: true,
+    secure: process.env.NODE_ENV === "production", // ✅ Secure only in production
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: "None", // ✅ Required for cross-site requests
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
   },
 }));
 
-// MongoDB Connection with Retry Logic
-let retryCount = 0;
-const MAX_RETRIES = 5;
-
+// MongoDB Connection
 const connectDB = async () => {
   try {
     await mongoose.connect(MONGO_URI);
     console.log("✅ MongoDB Connected");
   } catch (error) {
-    console.error(`❌ MongoDB Connection Failed (${retryCount + 1}/${MAX_RETRIES}):`, error.message);
-    retryCount++;
-
-    if (retryCount < MAX_RETRIES) {
-      setTimeout(connectDB, 5000); // Retry after 5 seconds
-    } else {
-      console.error("❌ Maximum connection attempts reached. Exiting...");
-      process.exit(1);
-    }
+    console.error(`❌ MongoDB Connection Failed:`, error.message);
+    process.exit(1);
   }
-  
 };
 connectDB();
 
-// Routes with Error Handling Wrapper
-const wrapAsync = (fn) => (req, res, next) => {
-  Promise.resolve(fn(req, res, next)).catch(next);
-};
-
-app.use("/", wrapAsync(Auth));
-app.use("/product", wrapAsync(Product));
-app.use("/order", wrapAsync(Order));
+// Routes
+app.use("/", Auth);
+app.use("/product", Product);
+app.use("/order", Order);
 
 // Default Route
 app.get("/", (req, res) => {
   res.status(200).json({ message: "Welcome to the API!" });
 });
 
-// Global Error Handling Middleware
+// Error Handling Middleware
 app.use((err, req, res, next) => {
   console.error("🚨 Error:", err.message);
   res.status(err.status || 500).json({
@@ -97,7 +95,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Graceful Shutdown Handling
+// Graceful Shutdown
 process.on("SIGINT", async () => {
   console.log("🛑 Server shutting down...");
   await mongoose.connection.close();
