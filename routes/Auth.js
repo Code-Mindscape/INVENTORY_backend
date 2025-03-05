@@ -29,16 +29,16 @@ router.post("/worker-login", async (req, res) => {
 });
 
 // ✅ Worker Registration
-router.post("/worker-register", async (req, res) => {
+router.post("/worker-register3453", async (req, res) => {
   try {
-    const { username, workerID } = req.body;
+    const { username, password } = req.body;
 
     // ✅ Hash password before saving
-    const hashedID = await bcrypt.hash(workerID, 10);
+    const hashedPass = await bcrypt.hash(password, 10);
 
     const newWorker = new Worker({
       username,
-      workerID: hashedID,
+      password: hashedPass,
     });
 
     await newWorker.save();
