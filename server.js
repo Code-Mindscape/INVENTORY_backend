@@ -28,7 +28,7 @@ if (!SESSION_SECRET) {
 }
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: "https://enventorymanager.vercel.app" || "http://localhost:3000",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
