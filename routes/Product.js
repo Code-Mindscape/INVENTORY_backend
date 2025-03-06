@@ -62,7 +62,8 @@ router.get("/allProducts", async (req, res) => {
     const totalCount = await Product.countDocuments(); // Total number of products
     const products = await Product.find()
       .skip((page - 1) * limit) // Skip previous pages
-      .limit(limit); // Limit per page
+      .limit(limit)
+      .sort({ createdAt: -1 }); // Limit per page
 
     res.status(200).json({
       products,
