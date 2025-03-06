@@ -1,14 +1,14 @@
 import express from "express";
 import { Product } from "../models/Product.Model.js";
 import { isAuthenticated, isAdmin } from "../middlewares/authMiddleware.js"; // ✅ Using authentication middleware
-import { uploadSingleImage } from "../middlewares/multer.js";
+// import { uploadSingleImage } from "../middlewares/multer.js";
 import { uploadToCloudinary } from "../config/cloudinary.js";
 
 const router = express.Router();
 
 
 
-router.post("/addProduct", isAuthenticated, isAdmin, uploadSingleImage, async (req, res) => {
+router.post("/addProduct", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { name, price, description, stock, size, color } = req.body;
 
