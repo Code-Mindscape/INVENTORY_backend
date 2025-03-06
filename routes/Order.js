@@ -2,7 +2,7 @@ import express from "express";
 import { Order } from "../models/Order.Model.js";
 import { Product } from "../models/Product.Model.js";
 import { Worker } from "../models/Worker.Model.js";
-import { isAuthenticated, isAdmin, isWorker } from "../middlewares/authMiddleware.js"; // ✅ Using middleware for cleaner code
+import { isAuthenticated, isAdmin, isWorker } from "../middleware/authMiddleware.js"; // ✅ Using middleware for cleaner code
 
 const router = express.Router();
 
