@@ -49,18 +49,36 @@ router.post("/addOrder", isAuthenticated, isWorker, async (req, res) => {
 // ✅ Worker can view their own orders
 router.get("/my-orders", isAuthenticated, isWorker, async (req, res) => {
   try {
+    const { page = 1, limit = 8 } = req.query;
+
+    // Convert query params to numbers
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+
+    // Count total worker orders
+    const totalCount = await Order.countDocuments({ workerID: req.session.user.id });
+
+    // Fetch paginated orders
     const myOrders = await Order.find({ workerID: req.session.user.id })
-      .populate({ path: "productID", select: "name" }) // ✅ Fetch only 'name' field
+      .populate({ path: "productID", select: "name size color" }) // ✅ Include additional details
+      .skip((pageNum - 1) * limitNum) // ✅ Skip previous pages
+      .limit(limitNum) // ✅ Limit per page
       .lean();
 
+    // Fetch worker's username
     const worker = await Worker.findById(req.session.user.id).select("username").lean();
 
-    res.json({ myOrders, workername: worker ? worker.username : "Unknown Worker" });
+    res.json({ 
+      myOrders, 
+      workername: worker ? worker.username : "Unknown Worker",
+      totalCount // ✅ Send total count for pagination
+    });
   } catch (error) {
     console.error("Error fetching worker orders:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
 
 
 
