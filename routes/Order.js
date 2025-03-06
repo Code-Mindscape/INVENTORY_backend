@@ -76,9 +76,12 @@ router.get("/allOrders", isAuthenticated, isAdmin, async (req, res) => {
     // ✅ Get total count for pagination
     const totalCount = await Order.countDocuments();
 
-    // ✅ Fetch paginated orders
+    // ✅ Fetch paginated orders with correct population
     const orders = await Order.find()
-      .populate({ path: "productID", select: "name" }) 
+      .populate({ 
+        path: "productID", 
+        select: "name size color" // ✅ Fetch name, size, and color in ONE call
+      })
       .populate({ path: "workerID", select: "username" })
       .skip((pageNum - 1) * limitNum) // ✅ Skip previous pages
       .limit(limitNum) // ✅ Limit orders per page
@@ -90,6 +93,7 @@ router.get("/allOrders", isAuthenticated, isAdmin, async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
 
 // ✅ Admin can delete an order
 router.delete("/delOrder/:id", isAuthenticated, isAdmin, async (req, res) => {
