@@ -18,10 +18,12 @@ router.post("/addProduct", isAuthenticated, isAdmin, uploadSingleImage, async (r
 
     // ✅ Upload image to Cloudinary
     let imageUrl = "";
+    if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.buffer);
       imageUrl = uploadResult.secure_url;
+    }
 
-    const newProduct = new Product({ name, price, description, stock, size, color, image: imageUrl });
+    const newProduct = new Product({ name, price, description, stock, size, color, imageUrl: imageUrl });
     await newProduct.save();
 
     res.status(201).json({ message: "Product added successfully", product: newProduct });
