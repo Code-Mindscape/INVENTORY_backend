@@ -2,21 +2,23 @@ import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
+import helmet from "helmet"; // ✅ Security Headers
 import session from "express-session";
 import cookieParser from "cookie-parser";
-import MongoStore from "connect-mongo"; // ✅ Store sessions in MongoDB
+import MongoStore from "connect-mongo";
+import { fileURLToPath } from "url";
+import path from "path";
 
-import Auth from "./routes/Auth.js";
-import Product from "./routes/Product.js";
-import Order from "./routes/Order.js";
+import AuthRoutes from "./routes/Auth.js";
+import ProductRoutes from "./routes/Product.js";
+import OrderRoutes from "./routes/Order.js";
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Environment Variables Validation
-const MONGO_URI = process.env.MONGO_URI;
-const SESSION_SECRET = process.env.SESSION_SECRET;
+// 📌 Validate Environment Variables
+const { MONGO_URI, SESSION_SECRET, NODE_ENV } = process.env;
 
 if (!MONGO_URI) {
   console.error("❌ MONGO_URI is not defined in .env");
@@ -28,9 +30,14 @@ if (!SESSION_SECRET) {
   process.exit(1);
 }
 
-// ✅ Fix: Allow multiple origins
-const allowedOrigins = ["https://enventorymanager.vercel.app", "http://localhost:3000"];
+// ✅ Enhanced Security with Helmet
+app.use(helmet({
+  contentSecurityPolicy: false, // Allows inline styles/scripts if needed
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Fix for image loading
+}));
 
+// ✅ Improved CORS Handling
+const allowedOrigins = ["https://enventorymanager.vercel.app", "http://localhost:3000"];
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -39,35 +46,37 @@ app.use(cors({
       callback(new Error("Not allowed by CORS"));
     }
   },
-  credentials: true, // ✅ Allow cookies to be sent
+  credentials: true, // ✅ Allow Cookies
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-app.use(express.json());
+// ✅ Essential Middleware
+app.use(express.json({ limit: "5mb" })); // ✅ Allow JSON body up to 5MB
+app.use(express.urlencoded({ extended: true })); // ✅ Handle URL-encoded data
 app.use(cookieParser());
 
-// ✅ Fix: Trust Proxy for Railway
+// ✅ Fix: Trust Proxy for Deployment (e.g., Railway, Vercel)
 app.set("trust proxy", 1);
 
-// ✅ Fix: Store sessions in MongoDB instead of in-memory
+// ✅ Session Configuration (Stored in MongoDB)
 app.use(session({
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({ mongoUrl: MONGO_URI }), // ✅ Persistent session storage
+  store: MongoStore.create({ mongoUrl: MONGO_URI }),
   cookie: {
-    secure: process.env.NODE_ENV === "production", // ✅ Secure only in production
+    secure: NODE_ENV === "production",
     httpOnly: true,
-    sameSite: "None", // ✅ Required for cross-site requests
+    sameSite: "None", // ✅ Required for cross-origin sessions
     maxAge: 24 * 60 * 60 * 1000, // 1 day
   },
 }));
 
-// MongoDB Connection
+// ✅ Connect to MongoDB
 const connectDB = async () => {
   try {
-    await mongoose.connect(MONGO_URI);
+    await mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
     console.log("✅ MongoDB Connected");
   } catch (error) {
     console.error(`❌ MongoDB Connection Failed:`, error.message);
@@ -76,17 +85,22 @@ const connectDB = async () => {
 };
 connectDB();
 
-// Routes
-app.use("/", Auth);
-app.use("/product", Product);
-app.use("/order", Order);
+// ✅ Routes
+app.use("/auth", AuthRoutes);
+app.use("/product", ProductRoutes);
+app.use("/order", OrderRoutes);
 
-// Default Route
+// ✅ Static File Serving (If Needed for Frontend)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, "public")));
+
+// ✅ Default Route
 app.get("/", (req, res) => {
-  res.status(200).json({ message: "Welcome to the API!" });
+  res.status(200).json({ message: "🚀 Welcome to the API!" });
 });
 
-// Error Handling Middleware
+// ✅ Global Error Handling Middleware
 app.use((err, req, res, next) => {
   console.error("🚨 Error:", err.message);
   res.status(err.status || 500).json({
@@ -95,13 +109,16 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Graceful Shutdown
-process.on("SIGINT", async () => {
+// ✅ Graceful Shutdown (Handles MongoDB and Express)
+const shutdown = async () => {
   console.log("🛑 Server shutting down...");
   await mongoose.connection.close();
   console.log("📴 MongoDB Disconnected");
   process.exit(0);
-});
+};
 
-// Start Server
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+
+// ✅ Start Server
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
