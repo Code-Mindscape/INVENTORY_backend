@@ -1,81 +1,122 @@
-import express from "express";
-import { Product } from "../models/Product.Model.js";
-import { isAuthenticated, isAdmin } from "../middlewares/authMiddleware.js"; // ✅ Using authentication middleware
-import { uploadSingleImage } from "../middlewares/multer.js";
-import { uploadToCloudinary } from "../config/cloudinary.js";
+import React, { useEffect, useState } from "react";
+import AddProduct from "../pages/AddProduct";
 
-const router = express.Router();
+const InventoryTable = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const productsPerPage = 8;
+  const [totalPages, setTotalPages] = useState(1);
+  const [copiedId, setCopiedId] = useState(null);
 
+  const fetchProducts = async (page, query = "") => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `https://inventorybackend-production-6c3c.up.railway.app/product/allProducts?page=${page}&limit=${productsPerPage}&search=${query}`,
+        { credentials: "include" }
+      );
+      const data = await response.json();
 
-
-router.post("/addProduct", isAuthenticated, isAdmin, uploadSingleImage, async (req, res) => {
-  try {
-    const { name, price, description, stock, size, color } = req.body;
-
-    if (!name || !price || !stock) {
-      return res.status(400).json({ message: "Name, Price, and Stock are required." });
+      if (data.products) {
+        setProducts(data.products);
+        setTotalPages(Math.ceil(data.totalCount / productsPerPage));
+      } else {
+        setProducts([]);
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setProducts([]);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // ✅ Upload image to Cloudinary
-    let imageUrl = "";
-    if (req.file) {
-      const uploadResult = await uploadToCloudinary(req.file.buffer);
-      imageUrl = uploadResult.secure_url;
-    }
+  useEffect(() => {
+    fetchProducts(currentPage, searchQuery);
+  }, [currentPage, searchQuery]);
 
-    const newProduct = new Product({ name, price, description, stock, size, color, imageUrl: imageUrl });
-    await newProduct.save();
+  const handleSearch = (event) => {
+    setSearchQuery(event.target.value);
+    setCurrentPage(1);
+  };
 
-    res.status(201).json({ message: "Product added successfully", product: newProduct });
-  } catch (error) {
-    console.error("Error adding product:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-});
+  return (
+    <div className="p-6 mt-16">
+      {isModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative z-50">
+            <AddProduct onClose={() => setIsModalOpen(false)} onProductAdded={() => fetchProducts(currentPage)} />
+          </div>
+        </div>
+      )}
 
+      <div className="flex justify-between mb-4">
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={searchQuery}
+          onChange={handleSearch}
+          className="border p-2 rounded-md w-1/3"
+        />
+        <button
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-semibold shadow-md"
+          onClick={() => setIsModalOpen(true)}
+        >
+          Add Product
+        </button>
+      </div>
 
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="h-80 bg-gray-200 animate-pulse rounded-xl"></div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          {products.length > 0 ? (
+            products.map((product) => (
+              <div key={product._id} className="bg-white border border-gray-300 shadow-lg rounded-xl p-6 w-full relative">
+                <div className="w-full h-44 bg-gray-300 rounded-lg flex items-center justify-center text-gray-500">
+                  {product.imageUrl ? (
+                    <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover rounded-lg" />
+                  ) : (
+                    "No Image"
+                  )}
+                </div>
+                <h2 className="text-lg font-bold text-blue-800 mt-3">{product.name}</h2>
+              </div>
+            ))
+          ) : (
+            <p className="text-center text-gray-500 col-span-4">No products available</p>
+          )}
+        </div>
+      )}
 
-// ✅ Admin can delete a product
-router.delete("/delProduct/:id", isAuthenticated, isAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const deletedProduct = await Product.findByIdAndDelete(id);
+      <div className="flex justify-center items-center mt-6 space-x-3">
+        <button
+          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === 1 ? "bg-gray-300 cursor-not-allowed" : "bg-blue-500 text-white hover:bg-blue-600"}`}
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+        >
+          Prev
+        </button>
+        <span className="text-blue-700 font-bold text-lg">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === totalPages ? "bg-gray-300 cursor-not-allowed" : "bg-blue-500 text-white hover:bg-blue-600"}`}
+          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+};
 
-    if (!deletedProduct) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    res.json({ message: "Product deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting product:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-});
-
-// ✅ Public route - Anyone can view paginated products
-router.get("/allProducts", async (req, res) => {
-  try {
-    let { page = 1, limit = 8 } = req.query;
-    page = parseInt(page, 10);
-    limit = parseInt(limit, 10);
-
-    const totalCount = await Product.countDocuments(); // Total number of products
-    const products = await Product.find()
-      .skip((page - 1) * limit) // Skip previous pages
-      .limit(limit)
-      .sort({ createdAt: -1 }); // Limit per page
-
-    res.status(200).json({
-      products,
-      totalCount, // Send total count for pagination
-      currentPage: page,
-      totalPages: Math.ceil(totalCount / limit),
-    });
-  } catch (error) {
-    console.error("Error fetching products:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-});
-
-
-export default router;
+export default InventoryTable;
