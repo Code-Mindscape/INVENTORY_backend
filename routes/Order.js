@@ -67,18 +67,29 @@ router.get("/my-orders", isAuthenticated, isWorker, async (req, res) => {
 // ✅ Admin can view all orders
 router.get("/allOrders", isAuthenticated, isAdmin, async (req, res) => {
   try {
+    const { page = 1, limit = 8 } = req.query;
+
+    // ✅ Convert `page` and `limit` to numbers
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+
+    // ✅ Get total count for pagination
+    const totalCount = await Order.countDocuments();
+
+    // ✅ Fetch paginated orders
     const orders = await Order.find()
-      .populate({ path: "productID", select: "name" }) // ✅ Fetch product name
-      .populate({ path: "workerID", select: "username" }) // ✅ Fetch worker's username
+      .populate({ path: "productID", select: "name" }) 
+      .populate({ path: "workerID", select: "username" })
+      .skip((pageNum - 1) * limitNum) // ✅ Skip previous pages
+      .limit(limitNum) // ✅ Limit orders per page
       .lean();
 
-    res.status(200).json({ orders });
+    res.status(200).json({ orders, totalCount });
   } catch (error) {
     console.error("Error fetching all orders:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
-
 
 // ✅ Admin can delete an order
 router.delete("/delOrder/:id", isAuthenticated, isAdmin, async (req, res) => {
