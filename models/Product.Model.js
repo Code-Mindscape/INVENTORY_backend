@@ -25,6 +25,9 @@ const productSchema = new mongoose.Schema(
     color: {
       type: String,
       default: false, // If color options are available
+    },
+    imageUrl: {
+      type: String,
     }
   },
   { timestamps: true }
