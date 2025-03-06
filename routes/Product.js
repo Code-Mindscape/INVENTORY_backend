@@ -63,7 +63,7 @@ router.get("/allProducts", async (req, res) => {
     const products = await Product.find()
       .skip((page - 1) * limit) // Skip previous pages
       .limit(limit)
-      .sort({ createdAt: 1 }); // Limit per page
+      .sort({ createdAt: -1 }); // Limit per page
 
     res.status(200).json({
       products,
