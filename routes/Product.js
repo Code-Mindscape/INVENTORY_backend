@@ -1,7 +1,7 @@
 import express from "express";
 import { Product } from "../models/Product.Model.js";
-import { isAuthenticated, isAdmin } from "../middleware/authMiddleware.js"; // ✅ Using authentication middleware
-import { uploadSingleImage } from "../middleware/multer.js";
+import { isAuthenticated, isAdmin } from "../middlewares/authMiddleware.js"; // ✅ Using authentication middleware
+import { uploadSingleImage } from "../middlewares/multer.js";
 import { uploadToCloudinary } from "../config/cloudinary.js";
 
 const router = express.Router();
