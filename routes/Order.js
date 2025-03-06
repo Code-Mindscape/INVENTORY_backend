@@ -85,30 +85,32 @@ router.get("/my-orders", isAuthenticated, isWorker, async (req, res) => {
 // ✅ Admin can view all orders
 router.get("/allOrders", isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const { page = 1, limit = 8 } = req.query;
+    let { page = 1, limit = 8, search = "" } = req.query;
 
-    // ✅ Convert `page` and `limit` to numbers
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+    // Ensure page and limit are positive numbers
+    page = Math.max(1, parseInt(page, 10) || 1);
+    limit = Math.max(1, parseInt(limit, 10) || 8);
+    
+    // Build the search filter
+    const searchFilter = search
+      ? { customerName: { $regex: search, $options: "i" } } // Case-insensitive search
+      : {};
 
-    // ✅ Get total count for pagination
-    const totalCount = await Order.countDocuments();
-
-    // ✅ Fetch paginated orders with correct population
-    const orders = await Order.find()
-      .populate({ 
-        path: "productID", 
-        select: "name size color" // ✅ Fetch name, size, and color in ONE call
-      })
-      .populate({ path: "workerID", select: "username" })
-      .skip((pageNum - 1) * limitNum) // ✅ Skip previous pages
-      .limit(limitNum) // ✅ Limit orders per page
-      .lean();
+    // Fetch total count and orders concurrently for better performance
+    const [totalCount, orders] = await Promise.all([
+      Order.countDocuments(searchFilter), // Count documents with search filter
+      Order.find(searchFilter)
+        .populate("productID", "name size color")
+        .populate("workerID", "username")
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean()
+    ]);
 
     res.status(200).json({ orders, totalCount });
   } catch (error) {
     console.error("Error fetching all orders:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: "Failed to retrieve orders", error: error.message });
   }
 });
 
