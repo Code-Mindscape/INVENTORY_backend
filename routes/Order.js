@@ -49,20 +49,29 @@ router.post("/addOrder", isAuthenticated, isWorker, async (req, res) => {
 // ✅ Worker can view their own orders
 router.get("/my-orders", isAuthenticated, isWorker, async (req, res) => {
   try {
-    const { page = 1, limit = 8 } = req.query;
+    const { page = 1, limit = 8, search = "" } = req.query;
 
     // Convert query params to numbers
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
 
-    // Count total worker orders
-    const totalCount = await Order.countDocuments({ workerID: req.session.user.id });
+    // Construct search filter
+    const searchFilter = {
+      workerID: req.session.user.id,
+      $or: [
+        { customerName: { $regex: search, $options: "i" } }, // Case-insensitive search for customer name
+        { "productID.name": { $regex: search, $options: "i" } } // Search by product name
+      ],
+    };
 
-    // Fetch paginated orders
-    const myOrders = await Order.find({ workerID: req.session.user.id })
-      .populate({ path: "productID", select: "name size color" }) // ✅ Include additional details
-      .skip((pageNum - 1) * limitNum) // ✅ Skip previous pages
-      .limit(limitNum) // ✅ Limit per page
+    // Count total filtered orders
+    const totalCount = await Order.countDocuments(searchFilter);
+
+    // Fetch paginated and filtered orders
+    const myOrders = await Order.find(searchFilter)
+      .populate({ path: "productID", select: "name size color" })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum)
       .lean();
 
     // Fetch worker's username
@@ -71,7 +80,7 @@ router.get("/my-orders", isAuthenticated, isWorker, async (req, res) => {
     res.json({ 
       myOrders, 
       workername: worker ? worker.username : "Unknown Worker",
-      totalCount // ✅ Send total count for pagination
+      totalCount 
     });
   } catch (error) {
     console.error("Error fetching worker orders:", error);
