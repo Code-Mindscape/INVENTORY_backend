@@ -31,6 +31,16 @@ const orderSchema = new mongoose.Schema(
     delivered: {
       type: Boolean,
     },
+    dateAdded: {
+      type: String,
+      default: function () {
+        return new Date().toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+      },
+    },
   },
   { timestamps: true }
 );
