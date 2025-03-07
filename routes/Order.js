@@ -109,7 +109,7 @@ router.get("/allOrders", isAuthenticated, isAdmin, async (req, res) => {
     const [totalCount, orders] = await Promise.all([
       Order.countDocuments(searchFilter), // Count documents with search filter
       Order.find(searchFilter)
-        .populate("productID", "name size color")
+        .populate("productID", "name size color imageUrl")
         .populate("workerID", "username")
         .skip((page - 1) * limit)
         .limit(limit)
