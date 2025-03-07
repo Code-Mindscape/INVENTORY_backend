@@ -69,7 +69,7 @@ router.get("/my-orders", isAuthenticated, isWorker, async (req, res) => {
 
     // Fetch paginated and filtered orders
     const myOrders = await Order.find(searchFilter)
-      .populate({ path: "productID", select: "name size color" })
+      .populate({ path: "productID", select: "name size color imageUrl" })
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum)
       .lean();
